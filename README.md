@@ -163,9 +163,4 @@ Você é responsável por cumprir leis locais, políticas de provedores e termos
 
 ## 👤 Autor
 
-**Red Team Engineering**
-
-Se quiser, no próximo passo eu também posso criar:
-- logo SVG do projeto
-- tema terminal para demonstrações
-- roadmap visual (milestones)
+João Pedro
