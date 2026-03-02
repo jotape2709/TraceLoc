@@ -1,0 +1,38 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TraceLoc logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="1" stop-color="#0A1C2E"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="56" y1="56" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00E5FF"/>
+      <stop offset="1" stop-color="#00FFA3"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="360" height="320" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="320" rx="28" fill="url(#bg)"/>
+
+  <g filter="url(#glow)">
+    <circle cx="168" cy="160" r="84" stroke="url(#accent)" stroke-width="12"/>
+    <path d="M168 100V160L206 198" stroke="url(#accent)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M116 196L72 248" stroke="#00E5FF" stroke-opacity="0.9" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.5">
+    <circle cx="950" cy="80" r="3" fill="#00E5FF"/>
+    <circle cx="1012" cy="118" r="2.5" fill="#00FFA3"/>
+    <circle cx="920" cy="148" r="2" fill="#8CF9FF"/>
+    <path d="M950 80L1012 118L920 148" stroke="#1DD6FF" stroke-opacity="0.4" stroke-width="1.5"/>
+  </g>
+
+  <text x="320" y="145" fill="#F4F8FF" font-family="'JetBrains Mono', 'Fira Code', monospace" font-weight="700" font-size="92" letter-spacing="1">TraceLoc</text>
+  <text x="324" y="198" fill="#7EDBFF" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="30" letter-spacing="3">OSINT GEOINT · PHONE INTEL</text>
+  <text x="324" y="246" fill="#A5B4D4" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="22">By João Pedro</text>
+</svg>
