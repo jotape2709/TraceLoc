@@ -270,11 +270,31 @@ class PhoneProcessor:
         self.cache = cache
         self.lib = config.phone_lib
 
+        if self.lib:
+            self.lib.phoneintel_ping.restype = ctypes.c_char_p
+            self.lib.phoneintel_validate_e164.argtypes = [ctypes.c_char_p]
+            self.lib.phoneintel_validate_e164.restype = ctypes.c_int
+            self.lib.phoneintel_country_code.argtypes = [ctypes.c_char_p]
+            self.lib.phoneintel_country_code.restype = ctypes.c_char_p
+            self.lib.phoneintel_carrier.argtypes = [ctypes.c_char_p]
+            self.lib.phoneintel_carrier.restype = ctypes.c_char_p
+
         self.country_codes = {
             "1": {"country": "US/CA", "length": 10, "format": "+1 XXX XXX XXXX"},
             "44": {"country": "UK", "length": 10, "format": "+44 XX XXXX XXXX"},
             "55": {"country": "Brazil", "length": 11, "format": "+55 XX XXXXX XXXX"},
             "91": {"country": "India", "length": 10, "format": "+91 XXXXX XXXXX"},
+        }
+
+        self.br_ddd_map = {
+            "11": "São Paulo/SP", "21": "Rio de Janeiro/RJ", "31": "Belo Horizonte/MG", "41": "Curitiba/PR",
+            "51": "Porto Alegre/RS", "61": "Brasília/DF", "71": "Salvador/BA", "81": "Recife/PE",
+            "85": "Fortaleza/CE", "27": "Vitória/ES", "48": "Florianópolis/SC", "62": "Goiânia/GO",
+            "67": "Campo Grande/MS", "98": "São Luís/MA", "83": "João Pessoa/PB", "79": "Aracaju/SE"
+        }
+
+        self.br_carrier_hints = {
+            "912": "Claro", "913": "Tim", "914": "Vivo", "915": "Oi", "916": "Claro", "917": "Tim", "918": "Vivo", "919": "Oi"
         }
 
     def _get_api_key(self, service: str) -> str:
@@ -291,6 +311,10 @@ class PhoneProcessor:
             return {"error": "Invalid phone number format"}
 
         country_info = self._get_country_info(clean)
+        if self.lib:
+            result = self._analyze_native(phone, clean, country_info)
+        else:
+            result = self._analyze_python(phone, clean, country_info)
         result = self._analyze_native(clean, country_info) if self.lib else self._analyze_python(clean, country_info)
 
         if self.cache and result and "error" not in result:
@@ -300,6 +324,31 @@ class PhoneProcessor:
     @staticmethod
     def _clean_number(phone: str) -> str:
         return "".join(filter(str.isdigit, phone))
+
+    def _validate(self, phone: str) -> bool:
+        if self.lib:
+            try:
+                return self.lib.phoneintel_validate_e164(phone.encode("utf-8")) == 1
+            except Exception:
+                pass
+
+        import re
+        return bool(re.match(r"^[1-9][0-9]{7,14}$", phone))
+
+    def _get_country_info(self, phone: str) -> Dict:
+        if self.lib:
+            try:
+                code = self.lib.phoneintel_country_code(phone.encode("utf-8")).decode("utf-8")
+                if code and code in self.country_codes:
+                    info = self.country_codes[code]
+                    return {
+                        "country_code": code,
+                        "country": info["country"],
+                        "national_number": phone[len(code):],
+                        "format": info["format"],
+                    }
+            except Exception:
+                pass
 
     @staticmethod
     def _validate(phone: str) -> bool:
@@ -338,7 +387,7 @@ class PhoneProcessor:
                 "http://apilayer.net/api/validate",
                 {
                     "access_key": api_key,
-                    "number": phone,
+                    "number": clean,
                     "country_code": country_info.get("country_code", ""),
                     "format": 1,
                 },
@@ -348,6 +397,13 @@ class PhoneProcessor:
             if isinstance(data, dict) and data.get("valid"):
                 result.update(
                     {
+                        "carrier": data.get("carrier") or result["carrier"],
+                        "location": data.get("location") or result["location"],
+                        "line_type": data.get("line_type") or result["line_type"],
+                        "international_format": data.get("international_format", ""),
+                        "local_format": data.get("local_format", ""),
+                        "processor": "python+online",
+                        "confidence": "high",
                         "carrier": data.get("carrier", "unknown"),
                         "location": data.get("location", "unknown"),
                         "line_type": data.get("line_type", "unknown"),
@@ -360,6 +416,9 @@ class PhoneProcessor:
 
         return result
 
+    def _analyze_native(self, raw_phone: str, clean: str, country_info: Dict) -> Dict:
+        result = self._analyze_python(raw_phone, clean, country_info)
+        result["processor"] = f"native+{result.get('processor', 'python')}"
     def _analyze_native(self, phone: str, country_info: Dict) -> Dict:
         result = self._analyze_python(phone, country_info)
         result["processor"] = "native+python"

@@ -138,6 +138,19 @@ Resultado: o comando não quebra quando API externa está fora.
 
 ---
 
+
+## 📞 Inteligência Telefônica (melhorada)
+
+O módulo de telefone agora entrega resultado útil mesmo sem API paga:
+
+- detecção de **tipo de linha** (ex.: `mobile`, `fixed_line`)
+- **estimativa de localização** para números do Brasil via DDD
+- **heurística de operadora** para prefixos móveis brasileiros comuns
+- uso opcional do módulo nativo C++ para validação e carrier hints
+
+> Se a API online (`numverify`) estiver configurada, os dados são enriquecidos e sobrescrevem heurísticas locais.
+
+---
 ## 🎛️ Tema de Terminal para Demonstrações
 
 Carregue o tema oficial TraceLoc:
