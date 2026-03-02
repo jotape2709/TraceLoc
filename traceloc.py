@@ -315,6 +315,7 @@ class PhoneProcessor:
             result = self._analyze_native(phone, clean, country_info)
         else:
             result = self._analyze_python(phone, clean, country_info)
+        result = self._analyze_native(clean, country_info) if self.lib else self._analyze_python(clean, country_info)
 
         if self.cache and result and "error" not in result:
             self.cache.set("phone", phone, result)
@@ -349,6 +350,13 @@ class PhoneProcessor:
             except Exception:
                 pass
 
+    @staticmethod
+    def _validate(phone: str) -> bool:
+        import re
+
+        return bool(re.match(r"^[1-9][0-9]{7,14}$", phone))
+
+    def _get_country_info(self, phone: str) -> Dict:
         for code, info in sorted(self.country_codes.items(), key=lambda item: len(item[0]), reverse=True):
             if phone.startswith(code):
                 return {
@@ -359,61 +367,15 @@ class PhoneProcessor:
                 }
         return {"country_code": "unknown", "national_number": phone}
 
-    def _line_type_guess(self, country_info: Dict) -> str:
-        nn = country_info.get("national_number", "")
-        cc = country_info.get("country_code", "")
-
-        if cc == "55":
-            if len(nn) == 11 and nn[2:3] == "9":
-                return "mobile"
-            if len(nn) == 10:
-                return "fixed_line"
-        if cc == "1" and len(nn) == 10:
-            return "fixed_or_mobile"
-        if cc in {"44", "91"} and len(nn) >= 10:
-            return "mobile_or_fixed"
-        return "unknown"
-
-    def _location_guess(self, country_info: Dict) -> str:
-        if country_info.get("country_code") != "55":
-            return "unknown"
-
-        nn = country_info.get("national_number", "")
-        if len(nn) < 2:
-            return "unknown"
-
-        ddd = nn[:2]
-        return self.br_ddd_map.get(ddd, "Brazil (DDD não mapeado)")
-
-    def _carrier_guess(self, clean: str, country_info: Dict) -> str:
-        if self.lib:
-            try:
-                native = self.lib.phoneintel_carrier(clean.encode("utf-8")).decode("utf-8")
-                if native and native.lower() != "unknown":
-                    return native
-            except Exception:
-                pass
-
-        if country_info.get("country_code") == "55":
-            nn = country_info.get("national_number", "")
-            if len(nn) >= 5 and nn[2:3] == "9":
-                prefix3 = nn[2:5]
-                if prefix3 in self.br_carrier_hints:
-                    return self.br_carrier_hints[prefix3]
-            return "carrier_estimate_unavailable_br"
-
-        return "unknown"
-
-    def _analyze_python(self, raw_phone: str, clean: str, country_info: Dict) -> Dict:
+    def _analyze_python(self, phone: str, country_info: Dict) -> Dict:
         result = {
-            "raw": raw_phone,
-            "clean": clean,
+            "raw": phone,
+            "clean": phone,
             "country": country_info,
-            "carrier": self._carrier_guess(clean, country_info),
-            "location": self._location_guess(country_info),
-            "line_type": self._line_type_guess(country_info),
-            "processor": "python-heuristic",
-            "confidence": "medium" if country_info.get("country_code") == "55" else "low",
+            "carrier": "unknown",
+            "location": "unknown",
+            "line_type": "unknown",
+            "processor": "python",
         }
 
         api_key = self._get_api_key("numverify")
@@ -442,6 +404,11 @@ class PhoneProcessor:
                         "local_format": data.get("local_format", ""),
                         "processor": "python+online",
                         "confidence": "high",
+                        "carrier": data.get("carrier", "unknown"),
+                        "location": data.get("location", "unknown"),
+                        "line_type": data.get("line_type", "unknown"),
+                        "international_format": data.get("international_format", ""),
+                        "local_format": data.get("local_format", ""),
                     }
                 )
         except Exception as exc:
@@ -452,6 +419,9 @@ class PhoneProcessor:
     def _analyze_native(self, raw_phone: str, clean: str, country_info: Dict) -> Dict:
         result = self._analyze_python(raw_phone, clean, country_info)
         result["processor"] = f"native+{result.get('processor', 'python')}"
+    def _analyze_native(self, phone: str, country_info: Dict) -> Dict:
+        result = self._analyze_python(phone, country_info)
+        result["processor"] = "native+python"
         return result
 
 
